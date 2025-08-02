@@ -4,6 +4,9 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Star, Truck, Shield, Headphones } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ProductCard";
+import { HeroBanner } from "@/components/HeroBanner";
+import { PromotionBanner } from "@/components/PromotionBanner";
+import { CategoryShowcase } from "@/components/CategoryShowcase";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Home = () => {
@@ -32,34 +35,14 @@ export const Home = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6">
-              Welcome to{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                LunaMarket
-              </span>
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              Discover premium products, exceptional quality, and unbeatable service. Your perfect shopping experience starts here.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/products">
-                <Button size="lg" className="text-lg px-8 py-3">
-                  Shop Now <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link to="/about">
-                <Button variant="outline" size="lg" className="text-lg px-8 py-3">
-                  Learn More
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Hero Banner */}
+      <HeroBanner />
+
+      {/* Promotion Banners */}
+      <PromotionBanner />
+
+      {/* Category Showcase */}
+      <CategoryShowcase />
 
       {/* Features Section */}
       <section className="py-16 bg-gray-50">
@@ -97,7 +80,10 @@ export const Home = () => {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold">Featured Products</h2>
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2">Featured Products</h2>
+              <p className="text-gray-600">Hand-picked products with the best quality and value</p>
+            </div>
             <Link to="/products">
               <Button variant="outline">
                 View All <ArrowRight className="ml-2 h-4 w-4" />
@@ -125,6 +111,28 @@ export const Home = () => {
         </div>
       </section>
 
+      {/* Newsletter Section */}
+      <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600">
+        <div className="container mx-auto px-4 text-center">
+          <div className="max-w-2xl mx-auto text-white">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Stay Updated</h2>
+            <p className="text-lg mb-8 opacity-90">
+              Subscribe to our newsletter and be the first to know about new products, exclusive deals, and special offers.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="flex-1 px-4 py-3 rounded-lg text-gray-900 placeholder-gray-500"
+              />
+              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+                Subscribe
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
@@ -134,27 +142,39 @@ export const Home = () => {
               {
                 name: "Sarah Johnson",
                 rating: 5,
-                comment: "Amazing quality products and super fast delivery! I'm definitely coming back for more."
+                comment: "Amazing quality products and super fast delivery! I'm definitely coming back for more.",
+                avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=60&h=60&fit=crop&crop=face"
               },
               {
                 name: "Mike Chen",
                 rating: 5,
-                comment: "The customer service is outstanding. They helped me find exactly what I was looking for."
+                comment: "The customer service is outstanding. They helped me find exactly what I was looking for.",
+                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&crop=face"
               },
               {
                 name: "Emily Davis",
                 rating: 5,
-                comment: "Great prices and excellent product variety. My go-to online store now!"
+                comment: "Great prices and excellent product variety. My go-to online store now!",
+                avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60&h=60&fit=crop&crop=face"
               }
             ].map((testimonial, index) => (
-              <div key={index} className="bg-white p-6 rounded-lg shadow-sm">
+              <div key={index} className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                  ))}
+                  <img 
+                    src={testimonial.avatar} 
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full mr-4"
+                  />
+                  <div>
+                    <p className="font-semibold">{testimonial.name}</p>
+                    <div className="flex items-center">
+                      {[...Array(testimonial.rating)].map((_, i) => (
+                        <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-gray-600 mb-4">"{testimonial.comment}"</p>
-                <p className="font-semibold">{testimonial.name}</p>
+                <p className="text-gray-600 italic">"{testimonial.comment}"</p>
               </div>
             ))}
           </div>
