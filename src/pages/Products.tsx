@@ -22,6 +22,7 @@ interface Product {
   rating: number;
   review_count: number;
   popularity_score: number;
+  created_at: string;
 }
 
 export const Products = () => {
