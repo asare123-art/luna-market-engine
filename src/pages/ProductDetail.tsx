@@ -1,10 +1,13 @@
 
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ShoppingCart, Heart, ArrowLeft, Star, Truck, Shield } from "lucide-react";
+import { ShoppingCart, Heart, ArrowLeft, Truck, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StarRating } from "@/components/StarRating";
+import { ProductReviews } from "@/components/ProductReviews";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -138,7 +141,7 @@ export const ProductDetail = () => {
         Back to Products
       </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
         {/* Product Image */}
         <div className="space-y-4">
           <div className="aspect-square overflow-hidden rounded-lg border">
@@ -156,12 +159,10 @@ export const ProductDetail = () => {
             <Badge variant="outline" className="mb-2">{product.category}</Badge>
             <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
             <div className="flex items-center gap-2 mb-4">
-              <div className="flex">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <span className="text-sm text-gray-600">(124 reviews)</span>
+              <StarRating rating={product.rating || 0} />
+              <span className="text-sm text-gray-600">
+                ({product.review_count || 0} reviews)
+              </span>
             </div>
           </div>
 
@@ -243,6 +244,69 @@ export const ProductDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Product Details Tabs */}
+      <Tabs defaultValue="reviews" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="reviews">Reviews ({product.review_count || 0})</TabsTrigger>
+          <TabsTrigger value="details">Product Details</TabsTrigger>
+          <TabsTrigger value="shipping">Shipping & Returns</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="reviews" className="mt-6">
+          <ProductReviews
+            productId={product.id}
+            productRating={product.rating || 0}
+            reviewCount={product.review_count || 0}
+          />
+        </TabsContent>
+        
+        <TabsContent value="details" className="mt-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Product Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <span className="font-medium">Brand:</span>
+                <span className="ml-2">{product.brand || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="font-medium">Category:</span>
+                <span className="ml-2">{product.category}</span>
+              </div>
+              <div>
+                <span className="font-medium">Stock:</span>
+                <span className="ml-2">{product.stock} units</span>
+              </div>
+              <div>
+                <span className="font-medium">Rating:</span>
+                <span className="ml-2">{product.rating ? product.rating.toFixed(1) : 'No ratings'}</span>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="shipping" className="mt-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Shipping & Returns</h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <Truck className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <p className="font-medium">Free Standard Shipping</p>
+                  <p className="text-sm text-gray-600">On orders over $50. Delivered in 5-7 business days.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="font-medium">30-Day Returns</p>
+                  <p className="text-sm text-gray-600">Easy returns within 30 days of purchase.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
