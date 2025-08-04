@@ -21,6 +21,7 @@ interface Product {
   stock: number;
   rating: number;
   review_count: number;
+  created_at: string;
 }
 
 export const Products = () => {
