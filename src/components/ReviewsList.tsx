@@ -18,9 +18,6 @@ interface Review {
   helpful_count: number;
   created_at: string;
   user_id: string;
-  profiles?: {
-    full_name: string;
-  };
 }
 
 interface ReviewsListProps {
@@ -47,12 +44,7 @@ export const ReviewsList = ({ productId, onEditReview, refreshTrigger }: Reviews
     try {
       const { data, error } = await supabase
         .from('reviews')
-        .select(`
-          *,
-          profiles (
-            full_name
-          )
-        `)
+        .select('*')
         .eq('product_id', productId)
         .order('created_at', { ascending: false });
 
@@ -199,10 +191,10 @@ export const ReviewsList = ({ productId, onEditReview, refreshTrigger }: Reviews
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">
-                    {review.profiles?.full_name?.[0] || 'U'}
+                    U
                   </div>
                   <div>
-                    <p className="font-medium">{review.profiles?.full_name || 'Anonymous'}</p>
+                    <p className="font-medium">Anonymous User</p>
                     <p className="text-sm text-gray-600">
                       {new Date(review.created_at).toLocaleDateString()}
                     </p>

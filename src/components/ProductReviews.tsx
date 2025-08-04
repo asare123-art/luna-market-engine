@@ -43,9 +43,9 @@ export const ProductReviews = ({ productId, productRating, reviewCount }: Produc
         .select('id, rating, title, comment')
         .eq('user_id', user.id)
         .eq('product_id', productId)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      if (error) {
         console.error('Error checking user review:', error);
         return;
       }
