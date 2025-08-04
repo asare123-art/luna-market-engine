@@ -1,12 +1,12 @@
 
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, Search, Menu, X } from "lucide-react";
+import { ShoppingCart, User, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { SearchAutocomplete } from "@/components/SearchAutocomplete";
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -76,13 +76,7 @@ export const Header = () => {
 
           {/* Search Bar */}
           <div className="hidden md:flex items-center space-x-4 flex-1 max-w-md mx-8">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search products..."
-                className="pl-10 pr-4 py-2 w-full"
-              />
-            </div>
+            <SearchAutocomplete className="flex-1" />
           </div>
 
           {/* User Actions */}
@@ -137,13 +131,7 @@ export const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t">
             <div className="flex flex-col space-y-4 pt-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search products..."
-                  className="pl-10 pr-4 py-2 w-full"
-                />
-              </div>
+              <SearchAutocomplete className="w-full" />
               <Link to="/products" className="text-gray-700 hover:text-primary transition-colors py-2">
                 Products
               </Link>

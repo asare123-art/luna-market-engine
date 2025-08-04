@@ -1,232 +1,205 @@
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Clock, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
-interface SearchAutocompleteProps {
-  onSearch?: (term: string) => void;
-  placeholder?: string;
-}
-
 interface SearchSuggestion {
-  type: 'product' | 'category' | 'brand' | 'recent';
-  text: string;
+  type: 'product' | 'category' | 'brand';
+  value: string;
   id?: string;
-  category?: string;
+  count?: number;
 }
 
-export const SearchAutocomplete = ({ onSearch, placeholder = "Search products..." }: SearchAutocompleteProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
+interface SearchAutocompleteProps {
+  onSearch?: (query: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+export const SearchAutocomplete = ({ onSearch, placeholder = "Search products...", className }: SearchAutocompleteProps) => {
+  const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const saved = localStorage.getItem('recentSearches');
-    if (saved) {
-      setRecentSearches(JSON.parse(saved));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (searchTerm.length > 1) {
-      const timer = setTimeout(() => {
-        fetchSuggestions();
-      }, 300);
-      return () => clearTimeout(timer);
-    } else {
-      setSuggestions([]);
-    }
-  }, [searchTerm]);
-
-  const fetchSuggestions = async () => {
-    if (!searchTerm.trim()) return;
-    
-    setLoading(true);
-    try {
-      // Fetch product suggestions
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, name, category, brand')
-        .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%`)
-        .limit(5);
-
-      const suggestions: SearchSuggestion[] = [];
-
-      // Add product suggestions
-      products?.forEach(product => {
-        suggestions.push({
-          type: 'product',
-          text: product.name,
-          id: product.id,
-          category: product.category
-        });
-      });
-
-      // Add unique categories and brands
-      const categories = [...new Set(products?.map(p => p.category) || [])];
-      const brands = [...new Set(products?.map(p => p.brand).filter(Boolean) || [])];
-
-      categories.slice(0, 2).forEach(category => {
-        suggestions.push({
-          type: 'category',
-          text: `in ${category}`,
-        });
-      });
-
-      brands.slice(0, 2).forEach(brand => {
-        if (brand && brand.toLowerCase().includes(searchTerm.toLowerCase())) {
-          suggestions.push({
-            type: 'brand',
-            text: `${brand} products`,
-          });
-        }
-      });
-
-      // Add recent searches if no other suggestions
-      if (suggestions.length === 0 && recentSearches.length > 0) {
-        recentSearches
-          .filter(recent => recent.toLowerCase().includes(searchTerm.toLowerCase()))
-          .slice(0, 3)
-          .forEach(recent => {
-            suggestions.push({
-              type: 'recent',
-              text: recent,
-            });
-          });
+    const fetchSuggestions = async () => {
+      if (query.length < 2) {
+        setSuggestions([]);
+        return;
       }
 
-      setSuggestions(suggestions);
-    } catch (error) {
-      console.error('Error fetching suggestions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoading(true);
+      try {
+        // Search products
+        const { data: products, error: productsError } = await supabase
+          .from('products')
+          .select('id, name')
+          .ilike('name', `%${query}%`)
+          .limit(5);
 
-  const handleSearch = (term: string) => {
-    if (!term.trim()) return;
+        if (productsError) throw productsError;
 
-    // Save to recent searches
-    const updated = [term, ...recentSearches.filter(s => s !== term)].slice(0, 10);
-    setRecentSearches(updated);
-    localStorage.setItem('recentSearches', JSON.stringify(updated));
+        // Search categories
+        const { data: categories, error: categoriesError } = await supabase
+          .from('products')
+          .select('category')
+          .ilike('category', `%${query}%`)
+          .limit(3);
 
+        if (categoriesError) throw categoriesError;
+
+        // Search brands
+        const { data: brands, error: brandsError } = await supabase
+          .from('products')
+          .select('brand')
+          .not('brand', 'is', null)
+          .ilike('brand', `%${query}%`)
+          .limit(3);
+
+        if (brandsError) throw brandsError;
+
+        const productSuggestions: SearchSuggestion[] = products?.map(p => ({
+          type: 'product' as const,
+          value: p.name,
+          id: p.id
+        })) || [];
+
+        const uniqueCategories = [...new Set(categories?.map(c => c.category))];
+        const categorySuggestions: SearchSuggestion[] = uniqueCategories.map(category => ({
+          type: 'category' as const,
+          value: category
+        }));
+
+        const uniqueBrands = [...new Set(brands?.map(b => b.brand).filter(Boolean))];
+        const brandSuggestions: SearchSuggestion[] = uniqueBrands.map(brand => ({
+          type: 'brand' as const,
+          value: brand!
+        }));
+
+        setSuggestions([...productSuggestions, ...categorySuggestions, ...brandSuggestions]);
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [query]);
+
+  const handleSearch = (searchQuery: string = query) => {
     if (onSearch) {
-      onSearch(term);
+      onSearch(searchQuery);
     } else {
-      navigate(`/products?search=${encodeURIComponent(term)}`);
+      navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
     }
-    
-    setShowSuggestions(false);
-    setSearchTerm("");
+    setIsOpen(false);
+    setQuery("");
   };
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
     if (suggestion.type === 'product' && suggestion.id) {
-      navigate(`/product/${suggestion.id}`);
+      navigate(`/products/${suggestion.id}`);
     } else if (suggestion.type === 'category') {
-      const category = suggestion.text.replace('in ', '');
-      navigate(`/products?category=${encodeURIComponent(category)}`);
+      navigate(`/products?category=${encodeURIComponent(suggestion.value)}`);
     } else if (suggestion.type === 'brand') {
-      const brand = suggestion.text.replace(' products', '');
-      navigate(`/products?brand=${encodeURIComponent(brand)}`);
+      navigate(`/products?brand=${encodeURIComponent(suggestion.value)}`);
     } else {
-      handleSearch(suggestion.text);
+      handleSearch(suggestion.value);
     }
   };
 
-  const clearRecentSearches = () => {
-    setRecentSearches([]);
-    localStorage.removeItem('recentSearches');
-    setSuggestions([]);
+  const getSuggestionIcon = (type: string) => {
+    switch (type) {
+      case 'product':
+        return '📦';
+      case 'category':
+        return '📂';
+      case 'brand':
+        return '🏷️';
+      default:
+        return '🔍';
+    }
   };
 
   return (
-    <div className="relative w-full max-w-md">
+    <div className={`relative ${className}`}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
         <Input
           ref={inputRef}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onFocus={() => setShowSuggestions(true)}
+          type="text"
+          placeholder={placeholder}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              handleSearch(searchTerm);
-            } else if (e.key === 'Escape') {
-              setShowSuggestions(false);
+              e.preventDefault();
+              handleSearch();
+            }
+            if (e.key === 'Escape') {
+              setIsOpen(false);
+              inputRef.current?.blur();
             }
           }}
-          placeholder={placeholder}
-          className="pl-10 pr-4"
+          className="pl-10 pr-10"
         />
+        {query && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute right-1 top-1 h-8 w-8 p-0"
+            onClick={() => {
+              setQuery("");
+              setSuggestions([]);
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      {showSuggestions && (searchTerm.length > 0 || recentSearches.length > 0) && (
-        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-50 mt-1 max-h-80 overflow-y-auto">
-          {loading && (
-            <div className="p-3 text-center text-gray-500">
-              <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-blue-600 rounded-full mx-auto"></div>
+      {isOpen && (query.length >= 2 || suggestions.length > 0) && (
+        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-80 overflow-y-auto">
+          {loading ? (
+            <div className="p-4 text-center text-gray-500">
+              <div className="animate-spin inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
+              <span className="ml-2">Searching...</span>
             </div>
-          )}
-
-          {!loading && suggestions.length > 0 && (
+          ) : suggestions.length > 0 ? (
             <div className="py-2">
               {suggestions.map((suggestion, index) => (
                 <button
-                  key={index}
+                  key={`${suggestion.type}-${suggestion.value}-${index}`}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3"
                 >
-                  {suggestion.type === 'product' && <Search className="h-4 w-4 text-gray-400" />}
-                  {suggestion.type === 'category' && <span className="text-blue-600 font-medium">Category:</span>}
-                  {suggestion.type === 'brand' && <span className="text-green-600 font-medium">Brand:</span>}
-                  {suggestion.type === 'recent' && <Clock className="h-4 w-4 text-gray-400" />}
-                  <span className="flex-1">{suggestion.text}</span>
+                  <span className="text-lg">{getSuggestionIcon(suggestion.type)}</span>
+                  <div className="flex-1">
+                    <div className="font-medium">{suggestion.value}</div>
+                    <div className="text-xs text-gray-500 capitalize">{suggestion.type}</div>
+                  </div>
                 </button>
               ))}
             </div>
-          )}
-
-          {!loading && searchTerm.length === 0 && recentSearches.length > 0 && (
-            <div className="py-2">
-              <div className="px-4 py-2 text-sm font-medium text-gray-600 flex items-center justify-between">
-                Recent Searches
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearRecentSearches}
-                  className="p-1 h-auto"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-              {recentSearches.slice(0, 5).map((recent, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleSearch(recent)}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3"
-                >
-                  <Clock className="h-4 w-4 text-gray-400" />
-                  <span>{recent}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {!loading && suggestions.length === 0 && searchTerm.length > 0 && (
+          ) : query.length >= 2 ? (
             <div className="p-4 text-center text-gray-500">
-              No suggestions found for "{searchTerm}"
+              No suggestions found
             </div>
-          )}
-        </div>
+          ) : null}
+        </Card>
       )}
     </div>
   );
