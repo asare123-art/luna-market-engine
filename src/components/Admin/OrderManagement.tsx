@@ -46,7 +46,7 @@ export const OrderManagement = () => {
         .from('orders')
         .select(`
           *,
-          profiles:user_id (
+          profiles!orders_user_id_fkey (
             full_name
           )
         `)
