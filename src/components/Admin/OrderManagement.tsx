@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,18 +41,30 @@ export const OrderManagement = () => {
 
   const fetchOrders = async () => {
     try {
-      const { data, error } = await supabase
+      // First get all orders
+      const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select(`
-          *,
-          profiles:user_id (
-            full_name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setOrders(data || []);
+      if (ordersError) throw ordersError;
+
+      // Then get all profiles for the users who have orders
+      const userIds = ordersData?.map(order => order.user_id) || [];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Combine the data
+      const ordersWithProfiles = ordersData?.map(order => ({
+        ...order,
+        profiles: profilesData?.find(profile => profile.id === order.user_id) || undefined
+      })) || [];
+
+      setOrders(ordersWithProfiles);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
