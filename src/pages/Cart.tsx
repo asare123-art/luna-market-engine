@@ -1,10 +1,11 @@
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { CartItem } from "@/components/CartItem";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -53,123 +54,9 @@ export const Cart = () => {
     }
   };
 
-  const updateQuantity = async (itemId: string, newQuantity: number) => {
-    if (newQuantity < 1) {
-      removeItem(itemId);
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('cart_items')
-        .update({ quantity: newQuantity })
-        .eq('id', itemId);
-
-      if (error) throw error;
-
-      setCartItems(items =>
-        items.map(item =>
-          item.id === itemId ? { ...item, quantity: newQuantity } : item
-        )
-      );
-
-      toast({
-        title: "Success",
-        description: "Cart updated",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update cart",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeItem = async (itemId: string) => {
-    try {
-      const { error } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('id', itemId);
-
-      if (error) throw error;
-
-      setCartItems(items => items.filter(item => item.id !== itemId));
-
-      toast({
-        title: "Success",
-        description: "Item removed from cart",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove item",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCheckout = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    // Create order
-    const orderTotal = cartItems.reduce((sum, item) => sum + (item.products.price * item.quantity), 0);
-
-    try {
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
-          total: orderTotal,
-          status: 'pending'
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Create order items
-      const orderItems = cartItems.map(item => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        price: item.products.price
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Clear cart
-      const { error: clearError } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (clearError) throw clearError;
-
-      toast({
-        title: "Order Placed!",
-        description: "Your order has been placed successfully",
-      });
-
-      navigate('/profile');
-    } catch (error) {
-      console.error('Checkout error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to place order",
-        variant: "destructive",
-      });
-    }
+  const handleCartUpdate = () => {
+    // Reload cart after any updates
+    checkAuthAndLoadCart();
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.products.price * item.quantity), 0);
@@ -209,57 +96,7 @@ export const Cart = () => {
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
           {cartItems.map((item) => (
-            <Card key={item.id}>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-4">
-                  <img
-                    src={item.products.image_url || `https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=100&h=100&fit=crop`}
-                    alt={item.products.name}
-                    className="w-20 h-20 object-cover rounded"
-                  />
-                  
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{item.products.name}</h3>
-                    <p className="text-gray-600 text-sm line-clamp-2">{item.products.description}</p>
-                    <p className="text-primary font-semibold mt-1">
-                      ${item.products.price.toFixed(2)}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="w-8 text-center">{item.quantity}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="font-semibold">
-                      ${(item.products.price * item.quantity).toFixed(2)}
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeItem(item.id)}
-                      className="text-red-600 hover:text-red-800 mt-1"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <CartItem key={item.id} item={item} onUpdate={handleCartUpdate} />
           ))}
         </div>
 
@@ -299,8 +136,12 @@ export const Cart = () => {
                 <span>${total.toFixed(2)}</span>
               </div>
 
-              <Button onClick={handleCheckout} className="w-full" size="lg">
-                Checkout
+              <Button 
+                onClick={() => navigate('/checkout')} 
+                className="w-full" 
+                size="lg"
+              >
+                Proceed to Checkout
               </Button>
 
               <Link to="/products" className="block">

@@ -15,6 +15,8 @@ import Signup from "./pages/Auth/Signup";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import ResetPassword from "./pages/Auth/ResetPassword";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import OrderConfirmation from "./pages/OrderConfirmation";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin/Admin";
 import NotFound from "./pages/NotFound";
@@ -34,6 +36,8 @@ const App: React.FC = () => (
               <Route path="products" element={<Products />} />
               <Route path="product/:id" element={<ProductDetail />} />
               <Route path="cart" element={<Cart />} />
+              <Route path="checkout" element={<Checkout />} />
+              <Route path="order-confirmation" element={<OrderConfirmation />} />
               <Route path="profile" element={<Profile />} />
               <Route path="admin" element={<Admin />} />
             </Route>
