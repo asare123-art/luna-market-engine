@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,7 +45,7 @@ export const OrderManagement = () => {
         .from('orders')
         .select(`
           *,
-          profiles!orders_user_id_fkey (
+          profiles (
             full_name
           )
         `)
